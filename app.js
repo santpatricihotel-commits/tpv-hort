@@ -1,5 +1,27 @@
 const { useState } = React;
 
+// ✅ CONFIGURACIÓN QZ
+qz.security.setCertificatePromise(function(resolve, reject) {
+  resolve();
+});
+
+qz.security.setSignaturePromise(function(toSign) {
+  return function(resolve, reject) {
+    resolve();
+  };
+});
+
+async function conectarQZ() {
+  try {
+    if (!qz.websocket.isActive()) {
+      await qz.websocket.connect();
+      console.log("✅ Conectado a QZ Tray");
+    }
+  } catch (err) {
+    console.error("Error conectando con QZ", err);
+  }
+}
+
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyhcns-Kb9KnS_DFzwrJ8no4y_gYCAzbqQxszdomMduxzm4r_O8kSTvkri1IR1YQfUl/exec';
 
 const productos = [
@@ -75,6 +97,50 @@ function App() {
            String(ahora.getSeconds()).padStart(2, '0');
   };
 
+  const imprimirTicketTermico = async () => {
+  try {
+    await conectarQZ();
+
+    const printer = await qz.printers.getDefault();
+    const config = qz.configs.create(printer);
+
+    const ahora = new Date();
+
+    const ticket = [
+      '\x1B\x40',
+      '\x1B\x61\x01',
+      'HORT SANT PATRICI\n',
+      '-----------------------------\n',
+      '\x1B\x61\x00',
+      `Fecha: ${ahora.toLocaleDateString('es-ES')}\n`,
+      `Hora: ${ahora.toLocaleTimeString('es-ES')}\n`,
+      '-----------------------------\n',
+    ];
+
+    carrito.forEach(item => {
+      ticket.push(
+        `${item.nombre}\n`,
+        `${item.cantidad} x ${formatoPrecio(item.precio)}\n`,
+        `${formatoPrecio(item.precio * item.cantidad)}\n`,
+        '-----------------------------\n'
+      );
+    });
+
+    ticket.push(
+      '\x1B\x61\x01',
+      'TOTAL\n',
+      `${formatoPrecio(total)}\n`,
+      '\n\n',
+      '\x1D\x56\x41'
+    );
+
+    await qz.print(config, ticket);
+
+  } catch (error) {
+    console.error("Error imprimiendo:", error);
+  }
+};
+
   const enviarAGoogleSheets = async (metodo) => {
     const ahora = new Date();
     const fecha = ahora.toLocaleDateString('es-ES');
@@ -97,7 +163,6 @@ function App() {
     try {
       await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
-        mode: 'no-cors',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -117,6 +182,7 @@ function App() {
     const exito = await enviarAGoogleSheets(metodo);
     
     if (exito) {
+      await imprimirTicketTermico();  // ✅ AÑADIDO
       setEstadoPago('success');
       setTimeout(() => {
         setCarrito([]);
