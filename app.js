@@ -98,6 +98,7 @@ function App() {
   };
 
   const imprimirTicketTermico = async () => {
+  console.log("🖨 Intentando imprimir...");
   try {
     await conectarQZ();
 
