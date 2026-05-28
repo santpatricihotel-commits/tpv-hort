@@ -2,15 +2,16 @@ const { useState } = React;
 
 // ✅ CONFIGURACIÓN QZ
 qz.security.setCertificatePromise(function(resolve, reject) {
-  resolve();
+  resolve(null);
 });
+
+qz.security.setSignatureAlgorithm("SHA512");
 
 qz.security.setSignaturePromise(function(toSign) {
   return function(resolve, reject) {
     resolve();
   };
 });
-
 async function conectarQZ() {
   try {
     if (!qz.websocket.isActive()) {
