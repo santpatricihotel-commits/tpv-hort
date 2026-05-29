@@ -7,52 +7,35 @@
     <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Dependencias necesarias para QZ Tray -->
-    <script src="https://cdn.jsdelivr.net/npm/rsvp@4.8.5/dist/rsvp.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qz-tray@2.2.3/qz-tray.js"></script>
 </head>
 <body>
     <div id="root"></div>
     <script>
-const { useState, useEffect } = React;
-
-// ✅ CONFIGURACIÓN QZ TRAY (modo sin firma, para uso local)
-qz.security.setCertificatePromise(function(resolve, reject) {
-  resolve(null); // Sin certificado: aparecerá un aviso de seguridad la primera vez
-});
-
-qz.security.setSignatureAlgorithm("SHA512");
-
-qz.security.setSignaturePromise(function(toSign) {
-  return function(resolve, reject) {
-    resolve(); // Sin firma
-  };
-});
-
-async function conectarQZ() {
-  try {
-    if (!qz.websocket.isActive()) {
-      await qz.websocket.connect();
-      console.log("✅ Conectado a QZ Tray");
-    }
-    return true;
-  } catch (err) {
-    console.error("❌ Error conectando con QZ Tray:", err);
-    return false;
-  }
-}
+const { useState } = React;
 
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyhcns-Kb9KnS_DFzwrJ8no4y_gYCAzbqQxszdomMduxzm4r_O8kSTvkri1IR1YQfUl/exec';
 
 const productos = [
   { id: 1, nombre: 'FRESC 1/12', precio: 5.00, color: 'bg-lime-500' },
   { id: 2, nombre: 'SEMI 1/8', precio: 6.50, color: 'bg-yellow-500' },
+  { id: 3, nombre: 'SEMI 1/4', precio: 12.00, color: 'bg-yellow-600' },
   { id: 4, nombre: 'CURAT 1/8', precio: 7.50, color: 'bg-amber-500' },
+  { id: 5, nombre: 'CURAT 1/4', precio: 14.00, color: 'bg-amber-600' },
   { id: 6, nombre: 'AÑEJO 1/8', precio: 6.00, color: 'bg-orange-600' },
+  { id: 7, nombre: 'AÑEJO 1/4', precio: 11.00, color: 'bg-orange-700' },
   { id: 8, nombre: 'CUMÍ', precio: 10.00, color: 'bg-red-500' },
   { id: 9, nombre: 'ROMANÍ', precio: 10.00, color: 'bg-green-600' },
   { id: 10, nombre: 'FUM', precio: 10.00, color: 'bg-stone-600' },
-  { id: 11, nombre: 'TABLA QUESO BARATA', precio: 8.00, color: 'bg-rose-600' },
+  { id: 11, nombre: 'OTROS', precio: 8.00, color: 'bg-rose-600' },
+  { id: 11, nombre: 'OTROS', precio: 5.00, color: 'bg-rose-600' },
+  { id: 13, nombre: 'PACK 2 GOURMET FUM + CUMÍ', precio: 18.50, color: 'bg-purple-500' },
+  { id: 14, nombre: 'PACK 2 GOURMET FUM + ROMANÍ', precio: 18.50, color: 'bg-purple-600' },
+  { id: 15, nombre: 'PACK 2 GOURMET CUMÍ + ROMANÍ', precio: 18.50, color: 'bg-purple-700' },
+  { id: 16, nombre: 'PACK 3 GOURMET', precio: 28.00, color: 'bg-purple-800' },
+  { id: 17, nombre: 'PACK 2 SEMI + CURAT', precio: 13.00, color: 'bg-indigo-400' },
+  { id: 18, nombre: 'PACK 2 SEMI + AÑEJO', precio: 12.00, color: 'bg-indigo-500' },
+  { id: 19, nombre: 'PACK 2 CURAT + AÑEJO', precio: 13.00, color: 'bg-indigo-600' },
+  { id: 20, nombre: 'PACK 3 SEMI + CURAT + AÑEJO', precio: 19.00, color: 'bg-indigo-700' },
   { id: 21, nombre: 'BOL QUESO', precio: 5.00, color: 'bg-indigo-800' },
   { id: 22, nombre: 'TABLA QUESO', precio: 10.00, color: 'bg-indigo-800' },
   { id: 23, nombre: 'ES MOLL', precio: 18.00, color: 'bg-red-500' },
@@ -72,21 +55,14 @@ function App() {
   const [mostrarPago, setMostrarPago] = useState(false);
   const [estadoPago, setEstadoPago] = useState('idle');
   const [metodoPago, setMetodoPago] = useState('');
-  const [estadoQZ, setEstadoQZ] = useState('desconectado'); // desconectado | conectado | error
-
-  // Conectar QZ al cargar la página
-  useEffect(() => {
-    (async () => {
-      const ok = await conectarQZ();
-      setEstadoQZ(ok ? 'conectado' : 'error');
-    })();
-  }, []);
 
   const agregarProducto = (producto) => {
     const existe = carrito.find(item => item.id === producto.id);
     if (existe) {
       setCarrito(carrito.map(item =>
-        item.id === producto.id ? { ...item, cantidad: item.cantidad + 1 } : item
+        item.id === producto.id
+          ? { ...item, cantidad: item.cantidad + 1 }
+          : item
       ));
     } else {
       setCarrito([...carrito, { ...producto, cantidad: 1 }]);
@@ -112,77 +88,12 @@ function App() {
 
   const generarIdVenta = () => {
     const ahora = new Date();
-    return 'V' + ahora.getFullYear().toString().slice(-2) +
-           String(ahora.getMonth() + 1).padStart(2, '0') +
-           String(ahora.getDate()).padStart(2, '0') +
-           String(ahora.getHours()).padStart(2, '0') +
-           String(ahora.getMinutes()).padStart(2, '0') +
+    return 'V' + ahora.getFullYear().toString().slice(-2) + 
+           String(ahora.getMonth() + 1).padStart(2, '0') + 
+           String(ahora.getDate()).padStart(2, '0') + 
+           String(ahora.getHours()).padStart(2, '0') + 
+           String(ahora.getMinutes()).padStart(2, '0') + 
            String(ahora.getSeconds()).padStart(2, '0');
-  };
-
-  // ✅ FUNCIÓN DE IMPRESIÓN
-  const imprimirTicketTermico = async () => {
-    console.log("🖨 Intentando imprimir...");
-    try {
-      const conectado = await conectarQZ();
-      if (!conectado) {
-        alert("⚠️ No se pudo conectar con QZ Tray. ¿Está abierto el programa?");
-        return false;
-      }
-
-      const printer = await qz.printers.getDefault();
-      console.log("Impresora detectada:", printer);
-
-      if (!printer) {
-        alert("⚠️ No se encontró impresora predeterminada. Configúrala en Windows.");
-        return false;
-      }
-
-      const config = qz.configs.create(printer, { encoding: 'CP858' });
-
-      const ahora = new Date();
-
-      const ticket = [
-        '\x1B\x40',           // Reset
-        '\x1B\x61\x01',       // Centrar
-        '\x1B\x21\x30',       // Texto grande
-        'HORT SANT PATRICI\n',
-        '\x1B\x21\x00',       // Texto normal
-        '-----------------------------\n',
-        '\x1B\x61\x00',       // Alinear izquierda
-        `Fecha: ${ahora.toLocaleDateString('es-ES')}\n`,
-        `Hora:  ${ahora.toLocaleTimeString('es-ES')}\n`,
-        '-----------------------------\n'
-      ];
-
-      carrito.forEach(item => {
-        ticket.push(
-          `${item.nombre}\n`,
-          `  ${item.cantidad} x ${formatoPrecio(item.precio)} = ${formatoPrecio(item.precio * item.cantidad)}\n`
-        );
-      });
-
-      ticket.push(
-        '-----------------------------\n',
-        '\x1B\x61\x02',       // Alinear derecha
-        '\x1B\x21\x30',       // Grande
-        `TOTAL: ${formatoPrecio(total)}\n`,
-        '\x1B\x21\x00',
-        '\x1B\x61\x01',       // Centrar
-        '\nGracias por su visita\n',
-        '\n\n\n',
-        '\x1D\x56\x41\x10'    // Cortar papel
-      );
-
-      await qz.print(config, ticket);
-      console.log("✅ Ticket enviado a impresora");
-      return true;
-
-    } catch (error) {
-      console.error("❌ Error imprimiendo:", error);
-      alert("Error imprimiendo: " + error.message);
-      return false;
-    }
   };
 
   const enviarAGoogleSheets = async (metodo) => {
@@ -193,12 +104,13 @@ function App() {
     const metodoPagoTexto = metodo === 'tarjeta' ? 'Tarjeta' : 'Efectivo';
 
     const datos = carrito.map(item => ({
-      fecha, hora,
+      fecha: fecha,
+      hora: hora,
       producto: item.nombre,
       cantidad: item.cantidad,
       precioUnit: formatoPrecio(item.precio),
       subtotal: formatoPrecio(item.precio * item.cantidad),
-      idVenta,
+      idVenta: idVenta,
       metodoPago: metodoPagoTexto,
       totalVenta: formatoPrecio(total)
     }));
@@ -207,7 +119,9 @@ function App() {
       await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(datos)
       });
       return true;
@@ -222,11 +136,8 @@ function App() {
     setEstadoPago('processing');
 
     const exito = await enviarAGoogleSheets(metodo);
-
+    
     if (exito) {
-      // Imprimir ticket SIEMPRE que el pago se haya guardado
-      await imprimirTicketTermico();
-
       setEstadoPago('success');
       setTimeout(() => {
         setCarrito([]);
@@ -250,16 +161,9 @@ function App() {
       React.createElement('header', { className: "bg-indigo-600 text-white p-4 shadow-lg" },
         React.createElement('div', { className: "flex items-center justify-between" },
           React.createElement('h1', { className: "text-2xl font-bold" }, "🧀 Hort Sant Patrici"),
-          React.createElement('div', { className: "flex items-center gap-4" },
-            // Indicador estado QZ
-            React.createElement('div', {
-              className: "px-3 py-1 rounded-lg text-sm font-semibold " +
-                (estadoQZ === 'conectado' ? 'bg-green-500' : estadoQZ === 'error' ? 'bg-red-500' : 'bg-yellow-500')
-            }, estadoQZ === 'conectado' ? '🖨 Impresora OK' : estadoQZ === 'error' ? '🖨 Sin QZ Tray' : '🖨 Conectando...'),
-            React.createElement('div', { className: "flex items-center gap-2 bg-indigo-700 px-4 py-2 rounded-lg" },
-              React.createElement('span', { className: "text-2xl" }, "🛒"),
-              React.createElement('span', { className: "text-xl font-semibold" }, cantidadItems + " items")
-            )
+          React.createElement('div', { className: "flex items-center gap-2 bg-indigo-700 px-4 py-2 rounded-lg" },
+            React.createElement('span', { className: "text-2xl" }, "🛒"),
+            React.createElement('span', { className: "text-xl font-semibold" }, cantidadItems + " items")
           )
         )
       ),
@@ -278,25 +182,6 @@ function App() {
                 React.createElement('span', { className: "text-2xl font-bold mt-2" }, formatoPrecio(producto.precio))
               )
             )
-          ),
-          // Botón de prueba de impresión
-          React.createElement('div', { className: "mt-6" },
-            React.createElement('button', {
-              onClick: async () => {
-                const conectado = await conectarQZ();
-                if (!conectado) { alert("QZ Tray no está abierto"); return; }
-                const printer = await qz.printers.getDefault();
-                const config = qz.configs.create(printer);
-                await qz.print(config, [
-                  '\x1B\x40',
-                  '\x1B\x61\x01',
-                  '*** PRUEBA DE IMPRESION ***\n',
-                  'Si lees esto, FUNCIONA!\n\n\n',
-                  '\x1D\x56\x41\x10'
-                ]);
-              },
-              className: "bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-800"
-            }, "🧪 Probar impresora")
           )
         ),
 
@@ -304,6 +189,7 @@ function App() {
           React.createElement('div', { className: "p-4 bg-gray-50 border-b" },
             React.createElement('h2', { className: "text-xl font-semibold text-gray-700" }, "🛒 Carrito")
           ),
+          
           React.createElement('div', { className: "flex-1 overflow-y-auto p-4" },
             carrito.length === 0 ?
               React.createElement('p', { className: "text-gray-400 text-center py-8" }, "El carrito está vacío") :
@@ -336,6 +222,7 @@ function App() {
                 )
               )
           ),
+
           React.createElement('div', { className: "p-4 border-t bg-gray-50" },
             React.createElement('div', { className: "flex justify-between items-center mb-4" },
               React.createElement('span', { className: "text-xl font-semibold text-gray-700" }, "Total:"),
@@ -377,11 +264,13 @@ function App() {
               )
             )
           ),
+
           estadoPago === 'processing' && React.createElement('div', { className: "p-12 text-center" },
             React.createElement('div', { className: "text-6xl mb-6 animate-spin" }, "⏳"),
             React.createElement('h3', { className: "text-xl font-bold text-gray-800" }, "Procesando pago..."),
-            React.createElement('p', { className: "text-gray-500 mt-2" }, "Guardando e imprimiendo")
+            React.createElement('p', { className: "text-gray-500 mt-2" }, "Guardando en Google Sheets")
           ),
+
           estadoPago === 'success' && React.createElement('div', { className: "p-12 text-center" },
             React.createElement('div', { className: "text-6xl mb-6" }, "✅"),
             React.createElement('h3', { className: "text-2xl font-bold text-gray-800 mb-2" }, "¡Pago Completado!"),
@@ -390,6 +279,7 @@ function App() {
             ),
             React.createElement('p', { className: "text-3xl font-bold text-green-500 mt-4" }, formatoPrecio(total))
           ),
+
           estadoPago === 'error' && React.createElement('div', { className: "p-12 text-center" },
             React.createElement('div', { className: "text-6xl mb-6" }, "❌"),
             React.createElement('h3', { className: "text-2xl font-bold text-gray-800 mb-2" }, "Error al guardar"),
