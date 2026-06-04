@@ -1,28 +1,42 @@
 const { useState } = React;
 
+// ✅ CONFIGURACIÓN QZ
+qz.security.setCertificatePromise(function(resolve, reject) {
+  resolve(null);
+});
+
+qz.security.setSignatureAlgorithm("SHA512");
+
+qz.security.setSignaturePromise(function(toSign) {
+  return function(resolve, reject) {
+    resolve();
+  };
+});
+async function conectarQZ() {
+  try {
+    if (!qz.websocket.isActive()) {
+      await qz.websocket.connect();
+      console.log("✅ Conectado a QZ Tray");
+    }
+  } catch (err) {
+    console.error("Error conectando con QZ", err);
+  }
+}
+
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyhcns-Kb9KnS_DFzwrJ8no4y_gYCAzbqQxszdomMduxzm4r_O8kSTvkri1IR1YQfUl/exec';
 
 const productos = [
-  { id: 1, nombre: 'FRESC', precio: 5.00, color: 'bg-lime-500' },
   { id: 2, nombre: 'SEMI 1/8', precio: 6.50, color: 'bg-yellow-500' },
-  { id: 3, nombre: 'SEMI 1/4', precio: 12.50, color: 'bg-yellow-600' },
   { id: 4, nombre: 'CURAT 1/8', precio: 7.50, color: 'bg-amber-500' },
-  { id: 5, nombre: 'CURAT 1/4', precio: 14.50, color: 'bg-amber-600' },
-  { id: 6, nombre: 'AÑEJO 1/8', precio: 8.50, color: 'bg-orange-600' },
-  { id: 7, nombre: 'AÑEJO 1/4', precio: 16.50, color: 'bg-orange-700' },
-  { id: 8, nombre: 'CUMÍ', precio: 10.00, color: 'bg-red-500' },
-  { id: 9, nombre: 'ROMANÍ', precio: 10.00, color: 'bg-green-600' },
+  { id: 6, nombre: 'AÑEJO 1/8', precio: 6.00, color: 'bg-orange-600' },
+  { id: 7, nombre: 'PACK 3 D.O.P.', precio: 20.00, color: 'bg-green-600' },
+  { id: 8, nombre: 'CUMÍ', precio: 10.00, color: 'bg-stone-200' },
+  { id: 9, nombre: 'ROMANÍ', precio: 10.00, color: 'bg-stone-400' },
   { id: 10, nombre: 'FUM', precio: 10.00, color: 'bg-stone-600' },
-  { id: 11, nombre: 'VINO ES MOLL 15€', precio: 15.00, color: 'bg-rose-600' },
-  { id: 12, nombre: 'VINO ES MOLL 18€', precio: 18.00, color: 'bg-rose-700' },
-  { id: 13, nombre: 'PACK 2 GOURMET FUM + CUMÍ', precio: 18.50, color: 'bg-purple-500' },
-  { id: 14, nombre: 'PACK 2 GOURMET FUM + ROMANÍ', precio: 18.50, color: 'bg-purple-600' },
-  { id: 15, nombre: 'PACK 2 GOURMET CUMÍ + ROMANÍ', precio: 18.50, color: 'bg-purple-700' },
-  { id: 16, nombre: 'PACK 3 GOURMET', precio: 28.00, color: 'bg-purple-800' },
-  { id: 17, nombre: 'PACK 2 SEMI + CURAT', precio: 13.00, color: 'bg-indigo-400' },
-  { id: 18, nombre: 'PACK 2 SEMI + AÑEJO', precio: 14.00, color: 'bg-indigo-500' },
-  { id: 19, nombre: 'PACK 2 CURAT + AÑEJO', precio: 15.00, color: 'bg-indigo-600' },
-  { id: 20, nombre: 'PACK 3 SEMI + CURAT + AÑEJO', precio: 21.00, color: 'bg-indigo-700' },
+  { id: 11, nombre: 'PACK 3 GOURMET', precio: 30.00, color: 'bg-green-600' },
+  { id: 23, nombre: 'ES MOLL', precio: 18.00, color: 'bg-red-500' },
+  { id: 25, nombre: 'SA VERMELLA', precio: 22.00, color: 'bg-red-600' },
+  { id: 27, nombre: 'ES RUPIT', precio: 19.00, color: 'bg-red-700' },
 ];
 
 const formatoPrecio = (precio) => {
@@ -75,6 +89,51 @@ function App() {
            String(ahora.getSeconds()).padStart(2, '0');
   };
 
+  const imprimirTicketTermico = async () => {
+  console.log("🖨 Intentando imprimir...");
+  try {
+    await conectarQZ();
+
+    const printer = await qz.printers.getDefault();
+    const config = qz.configs.create(printer);
+
+    const ahora = new Date();
+
+    const ticket = [
+      '\x1B\x40',
+      '\x1B\x61\x01',
+      'HORT SANT PATRICI\n',
+      '-----------------------------\n',
+      '\x1B\x61\x00',
+      `Fecha: ${ahora.toLocaleDateString('es-ES')}\n`,
+      `Hora: ${ahora.toLocaleTimeString('es-ES')}\n`,
+      '-----------------------------\n',
+    ];
+
+    carrito.forEach(item => {
+      ticket.push(
+        `${item.nombre}\n`,
+        `${item.cantidad} x ${formatoPrecio(item.precio)}\n`,
+        `${formatoPrecio(item.precio * item.cantidad)}\n`,
+        '-----------------------------\n'
+      );
+    });
+
+    ticket.push(
+      '\x1B\x61\x01',
+      'TOTAL\n',
+      `${formatoPrecio(total)}\n`,
+      '\n\n',
+      '\x1D\x56\x41'
+    );
+
+    await qz.print(config, ticket);
+
+  } catch (error) {
+    console.error("Error imprimiendo:", error);
+  }
+};
+
   const enviarAGoogleSheets = async (metodo) => {
     const ahora = new Date();
     const fecha = ahora.toLocaleDateString('es-ES');
@@ -97,7 +156,6 @@ function App() {
     try {
       await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
-        mode: 'no-cors',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -117,6 +175,7 @@ function App() {
     const exito = await enviarAGoogleSheets(metodo);
     
     if (exito) {
+      await imprimirTicketTermico();  // ✅ AÑADIDO
       setEstadoPago('success');
       setTimeout(() => {
         setCarrito([]);

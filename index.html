@@ -7,6 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qz-tray@2.2.3/qz-tray.js"></script>
 </head>
 <body>
     <div id="root"></div>
@@ -16,34 +17,17 @@ const { useState } = React;
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyhcns-Kb9KnS_DFzwrJ8no4y_gYCAzbqQxszdomMduxzm4r_O8kSTvkri1IR1YQfUl/exec';
 
 const productos = [
-  { id: 1, nombre: 'FRESC 1/12', precio: 5.00, color: 'bg-lime-500' },
   { id: 2, nombre: 'SEMI 1/8', precio: 6.50, color: 'bg-yellow-500' },
-  { id: 3, nombre: 'SEMI 1/4', precio: 12.00, color: 'bg-yellow-600' },
   { id: 4, nombre: 'CURAT 1/8', precio: 7.50, color: 'bg-amber-500' },
-  { id: 5, nombre: 'CURAT 1/4', precio: 14.00, color: 'bg-amber-600' },
   { id: 6, nombre: 'AÑEJO 1/8', precio: 6.00, color: 'bg-orange-600' },
-  { id: 7, nombre: 'AÑEJO 1/4', precio: 11.00, color: 'bg-orange-700' },
-  { id: 8, nombre: 'CUMÍ', precio: 10.00, color: 'bg-red-500' },
-  { id: 9, nombre: 'ROMANÍ', precio: 10.00, color: 'bg-green-600' },
+  { id: 7, nombre: 'PACK 3 D.O.P.', precio: 20.00, color: 'bg-green-600' },
+  { id: 8, nombre: 'CUMÍ', precio: 10.00, color: 'bg-stone-200' },
+  { id: 9, nombre: 'ROMANÍ', precio: 10.00, color: 'bg-stone-400' },
   { id: 10, nombre: 'FUM', precio: 10.00, color: 'bg-stone-600' },
-  { id: 11, nombre: 'OTROS', precio: 8.00, color: 'bg-rose-600' },
-  { id: 11, nombre: 'OTROS', precio: 5.00, color: 'bg-rose-600' },
-  { id: 13, nombre: 'PACK 2 GOURMET FUM + CUMÍ', precio: 18.50, color: 'bg-purple-500' },
-  { id: 14, nombre: 'PACK 2 GOURMET FUM + ROMANÍ', precio: 18.50, color: 'bg-purple-600' },
-  { id: 15, nombre: 'PACK 2 GOURMET CUMÍ + ROMANÍ', precio: 18.50, color: 'bg-purple-700' },
-  { id: 16, nombre: 'PACK 3 GOURMET', precio: 28.00, color: 'bg-purple-800' },
-  { id: 17, nombre: 'PACK 2 SEMI + CURAT', precio: 13.00, color: 'bg-indigo-400' },
-  { id: 18, nombre: 'PACK 2 SEMI + AÑEJO', precio: 12.00, color: 'bg-indigo-500' },
-  { id: 19, nombre: 'PACK 2 CURAT + AÑEJO', precio: 13.00, color: 'bg-indigo-600' },
-  { id: 20, nombre: 'PACK 3 SEMI + CURAT + AÑEJO', precio: 19.00, color: 'bg-indigo-700' },
-  { id: 21, nombre: 'BOL QUESO', precio: 5.00, color: 'bg-indigo-800' },
-  { id: 22, nombre: 'TABLA QUESO', precio: 10.00, color: 'bg-indigo-800' },
+  { id: 11, nombre: 'PACK 3 GOURMET', precio: 30.00, color: 'bg-green-600' },
   { id: 23, nombre: 'ES MOLL', precio: 18.00, color: 'bg-red-500' },
-  { id: 24, nombre: 'COPA ES MOLL', precio: 4.00, color: 'bg-red-600' },
   { id: 25, nombre: 'SA VERMELLA', precio: 22.00, color: 'bg-red-600' },
-  { id: 26, nombre: 'COPA SA VERMELLA', precio: 4.00, color: 'bg-red-700' },
   { id: 27, nombre: 'ES RUPIT', precio: 19.00, color: 'bg-red-700' },
-  { id: 28, nombre: 'COPA ES RUPIT', precio: 4.00, color: 'bg-red-800' }
 ];
 
 const formatoPrecio = (precio) => {
