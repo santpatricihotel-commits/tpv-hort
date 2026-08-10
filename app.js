@@ -12,6 +12,7 @@ qz.security.setSignaturePromise(function(toSign) {
     resolve();
   };
 });
+
 async function conectarQZ() {
   try {
     if (!qz.websocket.isActive()) {
@@ -49,6 +50,7 @@ function App() {
   const [mostrarPago, setMostrarPago] = useState(false);
   const [estadoPago, setEstadoPago] = useState('idle');
   const [metodoPago, setMetodoPago] = useState('');
+  const [dineroRecibido, setDineroRecibido] = useState('');
 
   const agregarProducto = (producto) => {
     const existe = carrito.find(item => item.id === producto.id);
@@ -80,6 +82,11 @@ function App() {
   const total = carrito.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
   const cantidadItems = carrito.reduce((sum, item) => sum + item.cantidad, 0);
 
+  // 💰 Cálculos del cambio
+  const recibidoNum = parseFloat(dineroRecibido.replace(',', '.')) || 0;
+  const cambio = recibidoNum - total;
+  const cambioValido = recibidoNum >= total && dineroRecibido !== '';
+
   const generarIdVenta = () => {
     const ahora = new Date();
     return 'V' + ahora.getFullYear().toString().slice(-2) + 
@@ -90,50 +97,63 @@ function App() {
            String(ahora.getSeconds()).padStart(2, '0');
   };
 
-  const imprimirTicketTermico = async () => {
-  console.log("🖨 Intentando imprimir...");
-  try {
-    await conectarQZ();
+  const imprimirTicketTermico = async (metodo) => {
+    console.log("🖨 Intentando imprimir...");
+    try {
+      await conectarQZ();
 
-    const printer = await qz.printers.getDefault();
-    const config = qz.configs.create(printer);
+      const printer = await qz.printers.getDefault();
+      const config = qz.configs.create(printer);
 
-    const ahora = new Date();
+      const ahora = new Date();
 
-    const ticket = [
-      '\x1B\x40',
-      '\x1B\x61\x01',
-      'HORT SANT PATRICI\n',
-      '-----------------------------\n',
-      '\x1B\x61\x00',
-      `Fecha: ${ahora.toLocaleDateString('es-ES')}\n`,
-      `Hora: ${ahora.toLocaleTimeString('es-ES')}\n`,
-      '-----------------------------\n',
-    ];
+      const ticket = [
+        '\x1B\x40',
+        '\x1B\x61\x01',
+        'HORT SANT PATRICI\n',
+        '-----------------------------\n',
+        '\x1B\x61\x00',
+        `Fecha: ${ahora.toLocaleDateString('es-ES')}\n`,
+        `Hora: ${ahora.toLocaleTimeString('es-ES')}\n`,
+        '-----------------------------\n',
+      ];
 
-    carrito.forEach(item => {
+      carrito.forEach(item => {
+        ticket.push(
+          `${item.nombre}\n`,
+          `${item.cantidad} x ${formatoPrecio(item.precio)}\n`,
+          `${formatoPrecio(item.precio * item.cantidad)}\n`,
+          '-----------------------------\n'
+        );
+      });
+
       ticket.push(
-        `${item.nombre}\n`,
-        `${item.cantidad} x ${formatoPrecio(item.precio)}\n`,
-        `${formatoPrecio(item.precio * item.cantidad)}\n`,
-        '-----------------------------\n'
+        '\x1B\x61\x01',
+        'TOTAL\n',
+        `${formatoPrecio(total)}\n`
       );
-    });
 
-    ticket.push(
-      '\x1B\x61\x01',
-      'TOTAL\n',
-      `${formatoPrecio(total)}\n`,
-      '\n\n',
-      '\x1D\x56\x41'
-    );
+      // 💰 Añadir entregado y cambio si es efectivo
+      if (metodo === 'efectivo' && recibidoNum > 0) {
+        ticket.push(
+          '\x1B\x61\x00',
+          '-----------------------------\n',
+          `Entregado: ${formatoPrecio(recibidoNum)}\n`,
+          `Cambio:    ${formatoPrecio(cambio)}\n`
+        );
+      }
 
-    await qz.print(config, ticket);
+      ticket.push(
+        '\n\n',
+        '\x1D\x56\x41'
+      );
 
-  } catch (error) {
-    console.error("Error imprimiendo:", error);
-  }
-};
+      await qz.print(config, ticket);
+
+    } catch (error) {
+      console.error("Error imprimiendo:", error);
+    }
+  };
 
   const enviarAGoogleSheets = async (metodo) => {
     const ahora = new Date();
@@ -176,14 +196,15 @@ function App() {
     const exito = await enviarAGoogleSheets(metodo);
     
     if (exito) {
-      await imprimirTicketTermico();  // ✅ AÑADIDO
+      await imprimirTicketTermico(metodo);
       setEstadoPago('success');
       setTimeout(() => {
         setCarrito([]);
         setMostrarPago(false);
         setEstadoPago('idle');
         setMetodoPago('');
-      }, 2000);
+        setDineroRecibido('');
+      }, 4000);
     } else {
       setEstadoPago('error');
     }
@@ -193,7 +214,11 @@ function App() {
     setMostrarPago(false);
     setEstadoPago('idle');
     setMetodoPago('');
+    setDineroRecibido('');
   };
+
+  // Botones rápidos de billetes
+  const billetesRapidos = [5, 10, 20, 50, 100];
 
   return (
     React.createElement('div', { className: "min-h-screen bg-gray-100 flex flex-col" },
@@ -302,10 +327,81 @@ function App() {
                   className: "w-full bg-blue-500 text-white py-6 rounded-xl text-xl font-bold hover:bg-blue-600 transition-colors flex items-center justify-center gap-4"
                 }, "💳 Pago con Tarjeta"),
                 React.createElement('button', {
-                  onClick: () => procesarPago('efectivo'),
+                  onClick: () => setEstadoPago('efectivo'),
                   className: "w-full bg-green-500 text-white py-6 rounded-xl text-xl font-bold hover:bg-green-600 transition-colors flex items-center justify-center gap-4"
                 }, "💵 Pago en Efectivo")
               )
+            )
+          ),
+
+          // 💰 PANTALLA CALCULADORA DE CAMBIO
+          estadoPago === 'efectivo' && React.createElement(React.Fragment, null,
+            React.createElement('div', { className: "p-6 bg-green-600 text-white flex justify-between items-center" },
+              React.createElement('h3', { className: "text-2xl font-bold" }, "💵 Pago en Efectivo"),
+              React.createElement('button', {
+                onClick: () => { setEstadoPago('idle'); setDineroRecibido(''); },
+                className: "w-10 h-10 bg-green-700 rounded-full flex items-center justify-center hover:bg-green-800 text-2xl"
+              }, "✕")
+            ),
+            React.createElement('div', { className: "p-6" },
+              React.createElement('div', { className: "flex justify-between items-center mb-4" },
+                React.createElement('span', { className: "text-gray-500 text-lg" }, "Total a cobrar:"),
+                React.createElement('span', { className: "text-2xl font-bold text-indigo-600" }, formatoPrecio(total))
+              ),
+
+              React.createElement('label', { className: "block text-gray-700 font-semibold mb-2" }, "¿Cuánto dinero te han dado?"),
+              React.createElement('input', {
+                type: 'text',
+                inputMode: 'decimal',
+                value: dineroRecibido,
+                onChange: (e) => {
+                  const valor = e.target.value.replace(/[^0-9.,]/g, '');
+                  setDineroRecibido(valor);
+                },
+                placeholder: '0,00',
+                autoFocus: true,
+                className: "w-full text-3xl font-bold text-center border-2 border-gray-300 rounded-xl py-4 mb-4 focus:border-green-500 focus:outline-none"
+              }),
+
+              // Botones rápidos
+              React.createElement('div', { className: "grid grid-cols-3 gap-2 mb-4" },
+                React.createElement('button', {
+                  onClick: () => setDineroRecibido(total.toFixed(2).replace('.', ',')),
+                  className: "bg-indigo-100 text-indigo-700 py-3 rounded-lg font-bold hover:bg-indigo-200 text-sm"
+                }, "Exacto"),
+                billetesRapidos.map(billete =>
+                  React.createElement('button', {
+                    key: billete,
+                    onClick: () => setDineroRecibido(billete.toFixed(2).replace('.', ',')),
+                    className: "bg-gray-100 text-gray-700 py-3 rounded-lg font-bold hover:bg-gray-200"
+                  }, billete + "€")
+                )
+              ),
+
+              // Resultado del cambio
+              React.createElement('div', {
+                className: "rounded-xl p-4 mb-4 text-center " + 
+                  (dineroRecibido === '' ? "bg-gray-100" : 
+                   cambioValido ? "bg-green-100" : "bg-red-100")
+              },
+                dineroRecibido === '' ?
+                  React.createElement('p', { className: "text-gray-400 text-lg" }, "Introduce el importe recibido") :
+                cambioValido ?
+                  React.createElement(React.Fragment, null,
+                    React.createElement('p', { className: "text-green-700 font-semibold" }, "Cambio a devolver:"),
+                    React.createElement('p', { className: "text-4xl font-bold text-green-600" }, formatoPrecio(cambio))
+                  ) :
+                  React.createElement(React.Fragment, null,
+                    React.createElement('p', { className: "text-red-700 font-semibold" }, "⚠️ Importe insuficiente"),
+                    React.createElement('p', { className: "text-2xl font-bold text-red-600" }, "Faltan " + formatoPrecio(total - recibidoNum))
+                  )
+              ),
+
+              React.createElement('button', {
+                onClick: () => procesarPago('efectivo'),
+                disabled: !cambioValido,
+                className: "w-full bg-green-500 text-white py-4 rounded-xl text-xl font-bold hover:bg-green-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+              }, "✅ Confirmar Cobro")
             )
           ),
 
@@ -321,7 +417,13 @@ function App() {
             React.createElement('p', { className: "text-gray-500" },
               (metodoPago === 'tarjeta' ? 'Pago con tarjeta' : 'Pago en efectivo') + " registrado"
             ),
-            React.createElement('p', { className: "text-3xl font-bold text-green-500 mt-4" }, formatoPrecio(total))
+            React.createElement('p', { className: "text-3xl font-bold text-green-500 mt-4" }, formatoPrecio(total)),
+            // 💰 Mostrar cambio en pantalla de éxito
+            metodoPago === 'efectivo' && recibidoNum > 0 && React.createElement('div', { className: "mt-4 bg-green-50 rounded-xl p-4" },
+              React.createElement('p', { className: "text-gray-500 text-sm" }, "Entregado: " + formatoPrecio(recibidoNum)),
+              React.createElement('p', { className: "text-green-700 font-semibold mt-1" }, "Cambio a devolver:"),
+              React.createElement('p', { className: "text-4xl font-bold text-green-600" }, formatoPrecio(cambio))
+            )
           ),
 
           estadoPago === 'error' && React.createElement('div', { className: "p-12 text-center" },
