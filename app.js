@@ -147,7 +147,7 @@ function App() {
     }
   };
 
- const enviarAGoogleSheets = async (metodo) => {
+  const enviarAGoogleSheets = async (metodo) => {
     const ahora = new Date();
     const fecha = ahora.toLocaleDateString('es-ES');
     const hora = ahora.toLocaleTimeString('es-ES');
@@ -193,8 +193,6 @@ function App() {
           finalizarVenta();
         }, 2000);
       }
-      // Si es efectivo, la pantalla de éxito se queda abierta mostrando
-      // el cambio hasta que se pulse "Nueva venta"
     } else {
       setEstadoPago('error');
     }
@@ -356,7 +354,7 @@ function App() {
                 className: "w-full text-3xl font-bold text-center border-2 border-gray-300 rounded-xl py-3 mb-3 focus:border-green-500 focus:outline-none"
               }),
 
-              // Botones rápidos (van sumando al importe)
+              // Botones rápidos
               React.createElement('div', { className: "grid grid-cols-3 gap-2 mb-4" },
                 React.createElement('button', {
                   onClick: () => setDineroRecibido(total.toFixed(2)),
