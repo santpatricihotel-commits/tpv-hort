@@ -26,7 +26,7 @@ async function conectarQZ() {
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyhcns-Kb9KnS_DFzwrJ8no4y_gYCAzbqQxszdomMduxzm4r_O8kSTvkri1IR1YQfUl/exec';
 
 const productos = [
-  { id: 1, nombre: 'FRESC', precio: 5.00, color: 'bg-red-300' },
+  { id: 1, nombre: 'FRESC', precio: 5.00, color: 'bg-blue-300' },
   { id: 2, nombre: 'SEMI 1/8', precio: 6.50, color: 'bg-yellow-500' },
   { id: 4, nombre: 'CURAT 1/8', precio: 7.50, color: 'bg-amber-500' },
   { id: 6, nombre: 'AÑEJO 1/8', precio: 6.00, color: 'bg-orange-600' },
