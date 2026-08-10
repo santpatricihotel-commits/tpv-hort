@@ -7,41 +7,17 @@
     <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qz-tray@2.2.3/qz-tray.js"></script>
 </head>
 <body>
     <div id="root"></div>
     <script>
 const { useState } = React;
 
-// ✅ CONFIGURACIÓN QZ
-qz.security.setCertificatePromise(function(resolve, reject) {
-  resolve(null);
-});
-
-qz.security.setSignatureAlgorithm("SHA512");
-
-qz.security.setSignaturePromise(function(toSign) {
-  return function(resolve, reject) {
-    resolve();
-  };
-});
-
-async function conectarQZ() {
-  try {
-    if (!qz.websocket.isActive()) {
-      await qz.websocket.connect();
-      console.log("✅ Conectado a QZ Tray");
-    }
-  } catch (err) {
-    console.error("Error conectando con QZ", err);
-  }
-}
 
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyhcns-Kb9KnS_DFzwrJ8no4y_gYCAzbqQxszdomMduxzm4r_O8kSTvkri1IR1YQfUl/exec';
 
 const productos = [
-  { id: 1, nombre: 'FRESC', precio: 5.00, color: 'bg-red-300' },
+  { id: 1, nombre: 'FRESC', precio: 5.00, color: 'bg-blue-300' },
   { id: 2, nombre: 'SEMI 1/8', precio: 6.50, color: 'bg-yellow-500' },
   { id: 4, nombre: 'CURAT 1/8', precio: 7.50, color: 'bg-amber-500' },
   { id: 6, nombre: 'AÑEJO 1/8', precio: 6.00, color: 'bg-orange-600' },
@@ -116,51 +92,6 @@ function App() {
            String(ahora.getSeconds()).padStart(2, '0');
   };
 
-  const imprimirTicketTermico = async () => {
-    console.log("🖨 Intentando imprimir...");
-    try {
-      await conectarQZ();
-
-      const printer = await qz.printers.getDefault();
-      const config = qz.configs.create(printer);
-
-      const ahora = new Date();
-
-      const ticket = [
-        '\x1B\x40',
-        '\x1B\x61\x01',
-        'HORT SANT PATRICI\n',
-        '-----------------------------\n',
-        '\x1B\x61\x00',
-        `Fecha: ${ahora.toLocaleDateString('es-ES')}\n`,
-        `Hora: ${ahora.toLocaleTimeString('es-ES')}\n`,
-        '-----------------------------\n',
-      ];
-
-      carrito.forEach(item => {
-        ticket.push(
-          `${item.nombre}\n`,
-          `${item.cantidad} x ${formatoPrecio(item.precio)}\n`,
-          `${formatoPrecio(item.precio * item.cantidad)}\n`,
-          '-----------------------------\n'
-        );
-      });
-
-      ticket.push(
-        '\x1B\x61\x01',
-        'TOTAL\n',
-        `${formatoPrecio(total)}\n`,
-        '\n\n',
-        '\x1D\x56\x41'
-      );
-
-      await qz.print(config, ticket);
-
-    } catch (error) {
-      console.error("Error imprimiendo:", error);
-    }
-  };
-
   const enviarAGoogleSheets = async (metodo) => {
     const ahora = new Date();
     const fecha = ahora.toLocaleDateString('es-ES');
@@ -200,7 +131,6 @@ function App() {
     const exito = await enviarAGoogleSheets(metodo);
     
     if (exito) {
-      await imprimirTicketTermico();
       setEstadoPago('success');
       if (metodo === 'tarjeta') {
         setTimeout(() => {
