@@ -14,30 +14,6 @@
     <script>
 const { useState } = React;
 
-// ✅ CONFIGURACIÓN QZ
-qz.security.setCertificatePromise(function(resolve, reject) {
-  resolve(null);
-});
-
-qz.security.setSignatureAlgorithm("SHA512");
-
-qz.security.setSignaturePromise(function(toSign) {
-  return function(resolve, reject) {
-    resolve();
-  };
-});
-
-async function conectarQZ() {
-  try {
-    if (!qz.websocket.isActive()) {
-      await qz.websocket.connect();
-      console.log("✅ Conectado a QZ Tray");
-    }
-  } catch (err) {
-    console.error("Error conectando con QZ", err);
-  }
-}
-
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyhcns-Kb9KnS_DFzwrJ8no4y_gYCAzbqQxszdomMduxzm4r_O8kSTvkri1IR1YQfUl/exec';
 
 const productos = [
@@ -64,7 +40,6 @@ function App() {
   const [mostrarPago, setMostrarPago] = useState(false);
   const [estadoPago, setEstadoPago] = useState('idle');
   const [metodoPago, setMetodoPago] = useState('');
-  const [dineroRecibido, setDineroRecibido] = useState('');
 
   const agregarProducto = (producto) => {
     const existe = carrito.find(item => item.id === producto.id);
@@ -96,16 +71,6 @@ function App() {
   const total = carrito.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
   const cantidadItems = carrito.reduce((sum, item) => sum + item.cantidad, 0);
 
-  // 💶 Cálculo del cambio
-  const recibidoNum = parseFloat(String(dineroRecibido).replace(',', '.')) || 0;
-  const cambio = recibidoNum - total;
-  const recibidoSuficiente = recibidoNum >= total - 0.001;
-
-  const sumarBillete = (valor) => {
-    const nuevo = (parseFloat(String(dineroRecibido).replace(',', '.')) || 0) + valor;
-    setDineroRecibido(nuevo.toFixed(2));
-  };
-
   const generarIdVenta = () => {
     const ahora = new Date();
     return 'V' + ahora.getFullYear().toString().slice(-2) + 
@@ -114,51 +79,6 @@ function App() {
            String(ahora.getHours()).padStart(2, '0') + 
            String(ahora.getMinutes()).padStart(2, '0') + 
            String(ahora.getSeconds()).padStart(2, '0');
-  };
-
-  const imprimirTicketTermico = async () => {
-    console.log("🖨 Intentando imprimir...");
-    try {
-      await conectarQZ();
-
-      const printer = await qz.printers.getDefault();
-      const config = qz.configs.create(printer);
-
-      const ahora = new Date();
-
-      const ticket = [
-        '\x1B\x40',
-        '\x1B\x61\x01',
-        'HORT SANT PATRICI\n',
-        '-----------------------------\n',
-        '\x1B\x61\x00',
-        `Fecha: ${ahora.toLocaleDateString('es-ES')}\n`,
-        `Hora: ${ahora.toLocaleTimeString('es-ES')}\n`,
-        '-----------------------------\n',
-      ];
-
-      carrito.forEach(item => {
-        ticket.push(
-          `${item.nombre}\n`,
-          `${item.cantidad} x ${formatoPrecio(item.precio)}\n`,
-          `${formatoPrecio(item.precio * item.cantidad)}\n`,
-          '-----------------------------\n'
-        );
-      });
-
-      ticket.push(
-        '\x1B\x61\x01',
-        'TOTAL\n',
-        `${formatoPrecio(total)}\n`,
-        '\n\n',
-        '\x1D\x56\x41'
-      );
-
-      await qz.print(config, ticket);
-
-    } catch (error) {
-      console.error("Error imprimiendo:", error);
-    }
   };
 
   const enviarAGoogleSheets = async (metodo) => {
@@ -183,6 +103,7 @@ function App() {
     try {
       await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
+        mode: 'no-cors',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -202,38 +123,26 @@ function App() {
     const exito = await enviarAGoogleSheets(metodo);
     
     if (exito) {
-      await imprimirTicketTermico();
       setEstadoPago('success');
-      if (metodo === 'tarjeta') {
-        setTimeout(() => {
-          finalizarVenta();
-        }, 2000);
-      }
-      // Si es efectivo, se queda en pantalla mostrando el cambio
-      // hasta que se pulse "Nueva venta"
+      setTimeout(() => {
+        setCarrito([]);
+        setMostrarPago(false);
+        setEstadoPago('idle');
+        setMetodoPago('');
+      }, 2000);
     } else {
       setEstadoPago('error');
     }
-  };
-
-  const finalizarVenta = () => {
-    setCarrito([]);
-    setMostrarPago(false);
-    setEstadoPago('idle');
-    setMetodoPago('');
-    setDineroRecibido('');
   };
 
   const cerrarModal = () => {
     setMostrarPago(false);
     setEstadoPago('idle');
     setMetodoPago('');
-    setDineroRecibido('');
   };
 
   return (
     React.createElement('div', { className: "min-h-screen bg-gray-100 flex flex-col" },
-      // Header
       React.createElement('header', { className: "bg-indigo-600 text-white p-4 shadow-lg" },
         React.createElement('div', { className: "flex items-center justify-between" },
           React.createElement('h1', { className: "text-2xl font-bold" }, "🧀 Hort Sant Patrici"),
@@ -245,7 +154,6 @@ function App() {
       ),
 
       React.createElement('div', { className: "flex flex-1 overflow-hidden" },
-        // Productos
         React.createElement('main', { className: "flex-1 p-4 overflow-y-auto" },
           React.createElement('h2', { className: "text-xl font-semibold text-gray-700 mb-4" }, "Productos"),
           React.createElement('div', { className: "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" },
@@ -262,7 +170,6 @@ function App() {
           )
         ),
 
-        // Carrito
         React.createElement('aside', { className: "w-80 bg-white shadow-xl flex flex-col" },
           React.createElement('div', { className: "p-4 bg-gray-50 border-b" },
             React.createElement('h2', { className: "text-xl font-semibold text-gray-700" }, "🛒 Carrito")
@@ -301,7 +208,6 @@ function App() {
               )
           ),
 
-          // Total y botón de pago
           React.createElement('div', { className: "p-4 border-t bg-gray-50" },
             React.createElement('div', { className: "flex justify-between items-center mb-4" },
               React.createElement('span', { className: "text-xl font-semibold text-gray-700" }, "Total:"),
@@ -316,7 +222,6 @@ function App() {
         )
       ),
 
-      // Modal de Pago
       mostrarPago && React.createElement('div', { className: "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" },
         React.createElement('div', { className: "bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden" },
           estadoPago === 'idle' && React.createElement(React.Fragment, null,
@@ -338,87 +243,9 @@ function App() {
                   className: "w-full bg-blue-500 text-white py-6 rounded-xl text-xl font-bold hover:bg-blue-600 transition-colors flex items-center justify-center gap-4"
                 }, "💳 Pago con Tarjeta"),
                 React.createElement('button', {
-                  onClick: () => { setDineroRecibido(''); setEstadoPago('efectivo'); },
+                  onClick: () => procesarPago('efectivo'),
                   className: "w-full bg-green-500 text-white py-6 rounded-xl text-xl font-bold hover:bg-green-600 transition-colors flex items-center justify-center gap-4"
                 }, "💵 Pago en Efectivo")
-              )
-            )
-          ),
-
-          // 💶 CALCULADORA DE CAMBIO
-          estadoPago === 'efectivo' && React.createElement(React.Fragment, null,
-            React.createElement('div', { className: "p-6 bg-green-600 text-white flex justify-between items-center" },
-              React.createElement('h3', { className: "text-2xl font-bold" }, "💵 Pago en Efectivo"),
-              React.createElement('button', {
-                onClick: cerrarModal,
-                className: "w-10 h-10 bg-green-700 rounded-full flex items-center justify-center hover:bg-green-800 text-2xl"
-              }, "✕")
-            ),
-            React.createElement('div', { className: "p-6" },
-              React.createElement('div', { className: "text-center mb-4" },
-                React.createElement('p', { className: "text-gray-500" }, "Total a cobrar"),
-                React.createElement('p', { className: "text-3xl font-bold text-indigo-600" }, formatoPrecio(total))
-              ),
-
-              React.createElement('label', { className: "block text-gray-600 font-semibold mb-2" }, "¿Cuánto dinero te han dado?"),
-              React.createElement('input', {
-                type: "number",
-                inputMode: "decimal",
-                step: "0.01",
-                min: "0",
-                value: dineroRecibido,
-                onChange: (e) => setDineroRecibido(e.target.value),
-                placeholder: "0,00",
-                className: "w-full text-3xl font-bold text-center border-2 border-gray-300 rounded-xl py-3 mb-3 focus:border-green-500 focus:outline-none"
-              }),
-
-              // Botones rápidos de billetes (van sumando)
-              React.createElement('div', { className: "grid grid-cols-3 gap-2 mb-4" },
-                React.createElement('button', {
-                  onClick: () => setDineroRecibido(total.toFixed(2)),
-                  className: "bg-indigo-100 text-indigo-700 py-3 rounded-lg font-bold hover:bg-indigo-200"
-                }, "Exacto"),
-                [5, 10, 20, 50].map(v =>
-                  React.createElement('button', {
-                    key: v,
-                    onClick: () => sumarBillete(v),
-                    className: "bg-gray-100 text-gray-700 py-3 rounded-lg font-bold hover:bg-gray-200"
-                  }, "+" + v + "€")
-                ),
-                React.createElement('button', {
-                  onClick: () => setDineroRecibido(''),
-                  className: "bg-red-100 text-red-600 py-3 rounded-lg font-bold hover:bg-red-200"
-                }, "Borrar")
-              ),
-
-              // Cambio a devolver
-              React.createElement('div', {
-                className: "rounded-xl p-4 text-center mb-4 " +
-                  (recibidoNum === 0 ? "bg-gray-100" : recibidoSuficiente ? "bg-green-100" : "bg-red-100")
-              },
-                React.createElement('p', { className: "text-gray-600 font-semibold" },
-                  recibidoNum === 0 ? "Introduce el importe recibido" :
-                  recibidoSuficiente ? "Cambio a devolver" : "Falta dinero"
-                ),
-                React.createElement('p', {
-                  className: "text-4xl font-bold " +
-                    (recibidoNum === 0 ? "text-gray-400" : recibidoSuficiente ? "text-green-600" : "text-red-500")
-                },
-                  recibidoNum === 0 ? "—" :
-                  recibidoSuficiente ? formatoPrecio(Math.max(0, cambio)) : formatoPrecio(Math.abs(cambio))
-                )
-              ),
-
-              React.createElement('div', { className: "space-y-3" },
-                React.createElement('button', {
-                  onClick: () => procesarPago('efectivo'),
-                  disabled: !recibidoSuficiente,
-                  className: "w-full bg-green-500 text-white py-4 rounded-xl text-xl font-bold hover:bg-green-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-                }, "✅ Confirmar Cobro"),
-                React.createElement('button', {
-                  onClick: () => setEstadoPago('idle'),
-                  className: "w-full bg-gray-200 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-300"
-                }, "← Volver")
               )
             )
           ),
@@ -435,17 +262,7 @@ function App() {
             React.createElement('p', { className: "text-gray-500" },
               (metodoPago === 'tarjeta' ? 'Pago con tarjeta' : 'Pago en efectivo') + " registrado"
             ),
-            React.createElement('p', { className: "text-3xl font-bold text-green-500 mt-4" }, formatoPrecio(total)),
-
-            // Cambio en pantalla de éxito (solo efectivo)
-            metodoPago === 'efectivo' && recibidoNum > 0 && React.createElement('div', { className: "mt-6 bg-amber-100 rounded-xl p-4" },
-              React.createElement('p', { className: "text-amber-700 font-semibold" }, "💶 Recibido: " + formatoPrecio(recibidoNum)),
-              React.createElement('p', { className: "text-amber-800 font-bold text-3xl mt-1" }, "Cambio: " + formatoPrecio(Math.max(0, cambio)))
-            ),
-            metodoPago === 'efectivo' && React.createElement('button', {
-              onClick: finalizarVenta,
-              className: "mt-6 w-full bg-indigo-600 text-white py-4 rounded-xl text-xl font-bold hover:bg-indigo-700"
-            }, "Nueva venta")
+            React.createElement('p', { className: "text-3xl font-bold text-green-500 mt-4" }, formatoPrecio(total))
           ),
 
           estadoPago === 'error' && React.createElement('div', { className: "p-12 text-center" },
