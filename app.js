@@ -147,7 +147,7 @@ function App() {
     }
   };
 
-  const enviarAGoogleSheets = async (metodo) => {
+ const enviarAGoogleSheets = async (metodo) => {
     const ahora = new Date();
     const fecha = ahora.toLocaleDateString('es-ES');
     const hora = ahora.toLocaleTimeString('es-ES');
@@ -169,9 +169,7 @@ function App() {
     try {
       await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        mode: 'no-cors',
         body: JSON.stringify(datos)
       });
       return true;
