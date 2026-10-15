@@ -8,7 +8,7 @@ const productos = [
   { id: 6, nombre: 'AÑEJO 1/8', precio: 6.00, color: 'bg-orange-600' },
   { id: 7, nombre: 'PACK 3 D.O.P.', precio: 20.00, color: 'bg-green-600' },
   { id: 8, nombre: 'GREIXERA', precio: 5.00, color: 'bg-blue-300' },
-  { id: 9, nombre: 'PLAT', precio: 5.00, color: 'bg-blue-600' },
+  { id: 9, nombre: 'PLAT', precio: 7.00, color: 'bg-blue-600' },
 ];
 
 const formatoPrecio = (precio) => {
