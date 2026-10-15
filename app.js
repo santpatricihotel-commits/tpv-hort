@@ -3,22 +3,12 @@ const { useState } = React;
 const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyhcns-Kb9KnS_DFzwrJ8no4y_gYCAzbqQxszdomMduxzm4r_O8kSTvkri1IR1YQfUl/exec';
 
 const productos = [
-  { id: 1, nombre: 'FRESC', precio: 5.00, color: 'bg-blue-300' },
   { id: 2, nombre: 'SEMI 1/8', precio: 6.50, color: 'bg-yellow-500' },
   { id: 4, nombre: 'CURAT 1/8', precio: 7.50, color: 'bg-amber-500' },
   { id: 6, nombre: 'AÑEJO 1/8', precio: 6.00, color: 'bg-orange-600' },
   { id: 7, nombre: 'PACK 3 D.O.P.', precio: 20.00, color: 'bg-green-600' },
-  { id: 8, nombre: 'CUMÍ', precio: 10.00, color: 'bg-stone-400' },
-  { id: 9, nombre: 'ROMANÍ', precio: 10.00, color: 'bg-stone-600' },
-  { id: 10, nombre: 'FUM', precio: 10.00, color: 'bg-stone-800' },
-  { id: 11, nombre: 'PACK 3 GOURMET', precio: 30.00, color: 'bg-green-600' },
-  { id: 23, nombre: 'ES MOLL', precio: 18.00, color: 'bg-red-500' },
-  { id: 25, nombre: 'SA VERMELLA', precio: 15.00, color: 'bg-red-600' },
-  { id: 27, nombre: 'SOMNI', precio: 20.00, color: 'bg-red-700' },
-  { id: 30, nombre: 'COPA SA VERMELLA', precio: 3.00, color: 'bg-blue-400' },
-  { id: 31, nombre: 'COPA ES MOLL', precio: 4.00, color: 'bg-blue-600' },
-  { id: 32, nombre: 'COPA SOMNI', precio: 4.00, color: 'bg-blue-800' },
-  { id: 40, nombre: 'TAPA', precio: 2.00, color: 'bg-red-200' },
+  { id: 8, nombre: 'GREIXERA', precio: 5.00, color: 'bg-blue-300' },
+  { id: 9, nombre: 'PLAT', precio: 5.00, color: 'bg-blue-600' },
 ];
 
 const formatoPrecio = (precio) => {
